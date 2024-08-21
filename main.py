@@ -710,7 +710,7 @@ def get_mention_from_search(start, end, counter = 1):
                 else:
                     print(datetime.datetime.now(), f'Search Error occurred at index {index} : {response_json}')
             except:
-                print(datetime.datetime.now(), response, f'Search Error occurred at index {index} : {response_json}')
+                print(datetime.datetime.now(), f'Search Error occurred at index {index}', response)
 
             break
         time.sleep(0.01)
