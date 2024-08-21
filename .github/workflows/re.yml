@@ -1,0 +1,47 @@
+name: recount
+
+on:
+  workflow_dispatch:
+
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        id: set
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+        continue-on-error: true
+        timeout-minutes: 1
+
+          
+      - name: Install Package
+        id: install
+        continue-on-error: true
+        run: |
+          sudo languagesetup -langspec ja
+          sudo systemsetup -settimezone Asia/Tokyo
+          sudo systemsetup -getusingnetworktime
+          sudo systemsetup -setusingnetworktime on
+          pip install requests
+
+
+      - name: Run Python
+        id: python
+        continue-on-error: true
+        env:
+          PHP_URL: ${{ secrets.PHP_URL }}
+          TZ: "Asia/Tokyo"
+        run: python recount.py test
+
+
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: a
+          path: a.png
