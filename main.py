@@ -787,6 +787,8 @@ def make_world_rank():
 def make_ranking(results_dict_arr, _driver):
     """当日分のランキングの作成"""
 
+    prepare_flag2 = True
+
     def make_month_rank():
         month_record, month_source = {}, {}
         n = datetime.datetime.now()
@@ -900,9 +902,9 @@ def make_ranking(results_dict_arr, _driver):
 
                 next_day = datetime.datetime.now() + datetime.timedelta(days=1)
                 if next_day.day == 1:
-                    while prepare_flag:
+                    while prepare_flag2:
                         time.sleep(1)
-                    time.sleep(10)
+                    time.sleep(1)
                     make_month_rank()
                 else:
                     _driver.quit()
@@ -1022,6 +1024,8 @@ def make_ranking(results_dict_arr, _driver):
     print("Response:", response.status_code, response.text)
     response = request_php('add', update_past_records)
     print("Response:", response.status_code, response.text)
+
+    prepare_flag2 = False
 
 
 
