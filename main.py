@@ -902,6 +902,7 @@ def make_ranking(results_dict_arr, _driver):
                 if next_day.day == 1:
                     while prepare_flag:
                         time.sleep(1)
+                    time.sleep(10)
                     make_month_rank()
                 else:
                     _driver.quit()
