@@ -1,6 +1,6 @@
 import chromedriver_binary
-import copy, datetime, json, os, requests, sys, threading, time, traceback, re, gzip, io, hmac, hashlib, base64, urllib.parse, random
-from collections import defaultdict
+import calendar, copy, datetime, json, os, requests, sys, threading, time, traceback, re, gzip, io, hmac, hashlib, base64, urllib.parse, random
+from collections import Counter, defaultdict
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.alert import Alert
 from selenium.webdriver.common.by import By
@@ -16,6 +16,7 @@ PHP_URL = os.environ['PHP_URL']
 TOKENS = os.environ['TOKENS']
 API_KEYS = os.environ['KEYS']
 HTML_URL = 'https://abshrimp.github.io/334ranker/'
+HTML_URL2 = 'https://abshrimp.github.io/334ranker/index2.html'
 ANDROID_AUTH = os.environ['AUTH']
 clients = ['Twitter for iPhone',  'Twitter for Android',  'Twitter Web Client',  'TweetDeck',  'TweetDeck Web App',  'Twitter for iPad',  'Twitter for Mac',  'Twitter Web App',  'Twitter Lite',  'Mobile Web (M2)',  'Twitter for Windows',  'Janetter',  'Janetter for Android',  'Janetter Pro for iPhone',  'Janetter for Mac',  'Janetter Pro for Android',  'Tweetbot for iΟS',  'Tweetbot for iOS',  'Tweetbot for Mac',  'twitcle plus',  'ツイタマ',  'ツイタマ for Android',  'ツイタマ+ for Android',  'Sobacha',  'SobaCha',  'Metacha',  'MetaCha',  'MateCha',  'ツイッターするやつ',  'ツイッターするやつγ',  'ツイッターするやつγ pro',  'jigtwi',  'feather for iOS',  'hamoooooon',  'Hel2um on iOS',  'Hel1um Pro on iOS',  'Hel1um on iOS',  'undefined']
 
@@ -259,6 +260,7 @@ def prepare_main():
     for _ in range(5):
         try:
             driver.request_interceptor = interceptor
+            get_request_body('https://x.com/user/status/1', 'TweetResultByRestId')
             login_twitter(main_account[3])
             get_request_body('https://x.com/home', 'Timeline')
             get_request_body('https://x.com/intent/user?user_id=1', 'UserByRestId')
@@ -705,7 +707,7 @@ def get_mention_from_search(start, end, counter = 1):
             response = search_timeline(text, search_accounts[index][0], search_accounts[index][1])
             try:
                 response_json = response.json()
-                if response.status_code == 200 and 'errors' not in response_json:
+                if 'data' in response_json:
                     convert(response_json)
                 else:
                     print(datetime.datetime.now(), f'Search Error occurred at index {index} : {response_json}')
@@ -785,6 +787,82 @@ def make_world_rank():
 def make_ranking(results_dict_arr, _driver):
     """当日分のランキングの作成"""
 
+    def make_month_rank():
+        month_record, month_source = {}, {}
+        n = datetime.datetime.now()
+        month_days = calendar.monthrange(n.year, n.month)[1]
+        response = request_php('get')
+        for record in response:
+            record_time = datetime.datetime.strptime(record['date'], '%Y-%m-%d') + datetime.timedelta(hours=TIME334[0], minutes=TIME334[1])
+            days = (datetime.datetime.now() - record_time).days
+            if days < month_days and record['source'] in clients:
+                id = record['userid']
+                if id not in month_record:
+                    month_record[id], month_source[id] = [], []
+                pt = 10000 * 2 ** (-10 * float(record['result']))
+                if len(month_record[id]) < 10:
+                    month_record[id].append(pt)
+                elif min(month_record[id]) < pt:
+                    month_record[id].remove(min(month_record[id]))
+                    month_record[id].append(pt)
+                month_source[id].append(record['source'])
+
+        month_data = []
+        for id in month_record:
+            month_data.append([id, sum(month_record[id]) / 10])
+        sorted_items = sorted(month_data, key=lambda x: x[1], reverse=True)
+        rankdata = []
+        current_rank = 1
+        previous_value = None
+        index = 0
+        for value in sorted_items:
+            index += 1
+            if index > 30: break
+            if value[1] != previous_value: current_rank = index
+            params = copy.deepcopy(request_body['UserByRestId'])
+            params['variables']['userId'] = value[0]
+            for key in params:
+                params[key] = json.dumps(params[key])
+            counter = Counter(month_source[value[0]])
+            headers = { "authorization": "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA" }
+            try:
+                response = requests.get(request_body['UserByRestId_url'].replace('x.com/i/api', 'api.x.com'), params=params, headers=headers)
+                legacy = response.json()['data']['user']['result']['legacy']
+                name = legacy['name']
+                if name == '': name = '@' + legacy['screen_name']
+                rankdata.append([current_rank, legacy['profile_image_url_https'], legacy['name'], value[1], len(month_source[value[0]]), counter.most_common(1)[0][0]])
+            except:
+                rankdata.append([current_rank, '', 'unknown', value[1], len(month_source[value[0]]), counter.most_common(1)[0][0]])
+            previous_value = value[1]
+
+        _driver.get(HTML_URL2)
+        wait = WebDriverWait(_driver, 20).until(EC.alert_is_present())
+        Alert(_driver).accept()
+        for _ in range(5):
+            try:
+                _driver.execute_script('document.getElementById("input").value = arguments[0]; start();', str(rankdata))
+                wait = WebDriverWait(_driver, 20).until(EC.alert_is_present())
+            except Exception as e:
+                traceback.print_exc()
+                _driver.get(HTML_URL2)
+                time.sleep(1)
+            else:
+                Alert(_driver).accept()
+                bin = _driver.execute_script('return window.res')
+                print('GET IMG2')
+                upload_response = oauth1.post('https://upload.twitter.com/1.1/media/upload.json', data={'media_data': bin})
+                media_id = upload_response.json().get('media_id_string')
+                payload = {
+                    'text': "This month's top 30",
+                    'media': {
+                        'media_ids': [media_id]
+                    }
+                }
+                print("POST RANK2 :")
+                tweet_from_main(payload)
+                _driver.quit()
+                break
+
     def retweet(id, screen_name):
         """リツイート"""
         
@@ -794,7 +872,7 @@ def make_ranking(results_dict_arr, _driver):
         print("RETWEET :")
         tweet_from_main(payload)
 
-    def make_img(tweets, _driver):
+    def make_img(tweets):
         """ランキング画像の生成とアップロード"""
 
         for _ in range(5):
@@ -819,8 +897,39 @@ def make_ranking(results_dict_arr, _driver):
                 }
                 print("POST RANK :")
                 tweet_from_main(payload)
-                _driver.quit()
+
+                next_day = datetime.datetime.now() + datetime.timedelta(days=1)
+                if next_day.day == 1:
+                    while prepare_flag:
+                        time.sleep(1)
+                    make_month_rank()
+                else:
+                    _driver.quit()
                 break
+    
+    tweet_from_id_gt = ''
+
+    def tweet_from_id(tweet_id):
+
+        nonlocal tweet_from_id_gt
+        if tweet_from_id_gt == '':
+            headers = { "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36" }
+            response = requests.get("https://x.com/?mx=2", headers=headers)
+            tweet_from_id_gt = re.findall(r'gt=(.*?);', response.text)[0]
+        
+        params = copy.deepcopy(request_body['TweetResultByRestId'])
+        params['variables']['tweetId'] = tweet_id
+        for key in params:
+            params[key] = json.dumps(params[key])
+        headers = {
+            "authorization": "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA",
+            "x-guest-token": tweet_from_id_gt
+        }
+        try:
+            response = requests.get(request_body['TweetResultByRestId_url'], params=params, headers=headers)
+            return response.json()['data']['tweetResult']['result']['source']
+        except:
+            return 'undefined'
 
 
     #生データを扱いやすい形に変換
@@ -846,7 +955,8 @@ def make_ranking(results_dict_arr, _driver):
 
                 img_src = 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
                 if item['user']['profile_image_url_https'] != '': img_src = item['user']['profile_image_url_https']
-                
+
+                if item['source'] == 'undefined': item['source'] = tweet_from_id(item['id_str'])
                 match = re.search(r'<a[^>]*>([^<]*)</a>', item['source'])
                 source = match.group(1) if match else item['source']
 
@@ -899,7 +1009,7 @@ def make_ranking(results_dict_arr, _driver):
                 update_past_records.append([id, today_str, result_str, source]) #JSONにできるよう文字列に
 
     print(str(results_for_img))
-    threading.Thread(target=make_img, args=(str(results_for_img), _driver,)).start()
+    threading.Thread(target=make_img, args=(str(results_for_img),)).start()
     
     make_world_rank()
     for update_record in update_records_rank:
