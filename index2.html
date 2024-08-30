@@ -207,7 +207,7 @@
 
     <script>
         window.onload = function () {
-            let xhr = new XMLHttpRequest();
+            /*let xhr = new XMLHttpRequest();
             xhr.open('GET', decodeURIComponent(window.location.href.replace(window.location.origin,"").split("?")[1]));
             xhr.send();
             xhr.onreadystatechange = function () {
@@ -215,7 +215,8 @@
                     window.data = JSON.parse(xhr.responseText);
                     alert("ready");
                 }
-            }
+            }*/
+            alert("ready");
         }
         ranking_idlist = []
 
@@ -331,24 +332,21 @@
                 img_div.setAttribute("style", "width:29px;height:29px;");
                 let img_tag = document.createElement('img');
                 img_tag.setAttribute("style", "width:inherit;height:inherit;object-fit:scale-down;object-position:left bottom;");
-                if (list[i][8] !== "") queue.push(toBase64Url(list[i][8], img_tag));
+                if (list[i][1] !== "") queue.push(toBase64Url(list[i][1], img_tag));
                 img_div.appendChild(img_tag);
                 img_td.appendChild(img_div);
                 tr.appendChild(img_td);
 
-                let name = "";
-                if (list[i][6] !== '︎︎') name = list[i][6];
-                else name = "@" + list[i][7];
                 let name_td = document.createElement('td');
                 name_td.setAttribute("class", row_style + " name");
-                name_td.innerText = name;
+                name_td.innerText = list[i][2];
                 tr.appendChild(name_td);
 
                 let time_td = document.createElement('td');
-                if (list[i][2] >= 9500 && rank_str !== "") time_td.setAttribute("class", row_style + " s7 time");
+                if (list[i][3] >= 9500 && rank_str !== "") time_td.setAttribute("class", row_style + " s7 time");
                 else time_td.setAttribute("class", row_style + " s6 time");
                 if (rank_str === "") list[i][2] = list[i][3];
-                time_td.innerText = String(list[i][2].toFixed(2));
+                time_td.innerText = String(list[i][3].toFixed(2));
                 tr.appendChild(time_td);
 
                 let join_td = document.createElement('td');
