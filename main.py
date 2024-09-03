@@ -933,7 +933,6 @@ def make_ranking(results_dict_arr, _driver):
             return response.json()['data']['tweetResult']['result']['source']
         except:
             traceback.print_exc()
-            print(response.text)
             return 'undefined'
 
 
