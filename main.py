@@ -932,6 +932,8 @@ def make_ranking(results_dict_arr, _driver):
             response = requests.get(request_body['TweetResultByRestId_url'], params=params, headers=headers)
             return response.json()['data']['tweetResult']['result']['source']
         except:
+            traceback.print_exc()
+            print(response.text)
             return 'undefined'
 
 
